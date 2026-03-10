@@ -26,6 +26,7 @@
        k. レイキャスト            (handleBoardClick)
        l. ゲームフロー            (placeStone, scheduleCPU, endGame)
        m. UI イベント
+       n. カオスモード            (chaos features)
 -->
 <style>
 /* ===== リセット・全体レイアウト ===== */
@@ -138,13 +139,74 @@ button { padding: 6px 16px; border: none; border-radius: 6px; cursor: pointer; f
 #gameover-result { font-size: 1.1em; margin-bottom: 20px; color: #ccc; }
 #btn-rematch { background: #2d8a3e; color: #fff; padding: 10px 28px; font-size: 1em; }
 #btn-rematch:hover { background: #3aaf50; }
+
+/* ===== カオスモード CSS ===== */
+#chaos-badge { font-size:0.72em; padding:2px 8px; border-radius:10px; margin-left:6px; background:linear-gradient(135deg,#ff6b35,#ffd700); color:#1a1a2e; font-weight:bold; animation:badge-pulse 2s infinite alternate; }
+@keyframes badge-pulse { from{box-shadow:0 0 4px #ff6b35;} to{box-shadow:0 0 12px #ffd700;} }
+
+#gravity-warning { display:none; position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:50; background:rgba(220,80,0,0.9); color:#fff; border-radius:8px; padding:6px 16px; font-size:0.88em; font-weight:bold; animation:warn-blink 0.5s step-start infinite; }
+@keyframes warn-blink { 50%{opacity:0.3;} }
+
+#charge-gauge { position:absolute; pointer-events:none; z-index:55; display:none; transform:translate(-50%,-50%); }
+
+#cpu-anger-bar { display:none; position:absolute; bottom:8px; right:8px; z-index:50; background:rgba(0,0,0,0.75); border-radius:8px; padding:6px 10px; font-size:0.78em; min-width:120px; }
+#cpu-anger-bar .label { color:#ff9944; margin-bottom:4px; }
+#anger-track { background:#333; border-radius:4px; height:8px; overflow:hidden; }
+#anger-fill { height:8px; border-radius:4px; background:linear-gradient(90deg,#ff6600,#ff0000); width:0%; transition:width 0.4s; }
+#cpu-mood-text { color:#ffcc44; font-size:0.9em; margin-top:3px; min-height:1.1em; }
+
+#sneeze-charm { display:none; position:absolute; bottom:8px; left:8px; z-index:50; flex-direction:column; gap:4px; }
+.charm-item { background:rgba(100,200,255,0.15); border:1px solid #66aaff; border-radius:8px; padding:4px 10px; cursor:pointer; font-size:0.8em; color:#88ccff; transition:background 0.2s; }
+.charm-item:hover { background:rgba(100,200,255,0.35); }
+
+#chaos-msg { display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:160; background:rgba(10,10,20,0.92); border:2px solid #f0c040; border-radius:14px; padding:18px 28px; font-size:1.3em; text-align:center; pointer-events:none; white-space:pre-line; line-height:1.5; }
+
+#cpu-rage-modal { display:none; position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); z-index:150; background:#3a1a1a; border:2px solid #ff4444; border-radius:14px; padding:20px 28px; text-align:center; min-width:250px; }
+#cpu-rage-modal h3 { color:#ff6666; font-size:1.4em; margin-bottom:10px; }
+#cpu-rage-modal p { color:#ffaaaa; font-size:0.9em; margin-bottom:14px; }
+.rage-btn { padding:8px 20px; border-radius:6px; font-size:0.9em; cursor:pointer; margin:0 6px; border:none; }
+#btn-refuse-reset { background:#2d8a3e; color:#fff; }
+#btn-refuse-reset:hover { background:#3aaf50; }
+#btn-allow-reset { background:#555; color:#eee; }
+#btn-allow-reset:hover { background:#777; }
+
+#zzz-layer { position:absolute; inset:0; pointer-events:none; z-index:40; overflow:hidden; }
+.zzz-item { position:absolute; font-size:0.7em; color:#88ccff; text-shadow:0 0 6px #0066ff; pointer-events:none; animation:zzz-bob 2s ease-in-out infinite; transform:translate(-50%,-100%); }
+@keyframes zzz-bob { 0%,100%{transform:translate(-50%,-100%) translateY(0);opacity:0.9;} 50%{transform:translate(-50%,-100%) translateY(-8px);opacity:1;} }
+
+.float-text { position:absolute; pointer-events:none; z-index:120; font-size:1.3em; font-weight:bold; animation:float-up 1.4s ease-out forwards; transform:translateX(-50%); white-space:nowrap; color:#ffd700; }
+@keyframes float-up { 0%{opacity:1;transform:translateX(-50%) translateY(0);} 100%{opacity:0;transform:translateX(-50%) translateY(-70px);} }
+
+@keyframes screen-shake {
+  0%,100%{transform:translate(0,0);}
+  10%{transform:translate(-10px,-5px);}
+  20%{transform:translate(10px,5px);}
+  30%{transform:translate(-8px,3px);}
+  40%{transform:translate(8px,-3px);}
+  50%{transform:translate(-5px,5px);}
+  60%{transform:translate(5px,-5px);}
+  70%{transform:translate(-3px,3px);}
+  80%{transform:translate(3px,-3px);}
+  90%{transform:translate(-2px,1px);}
+}
+.shake { animation:screen-shake 0.55s ease-out; }
+
+#destruction-overlay { display:none; position:absolute; inset:0; z-index:250; background:radial-gradient(circle at center,rgba(255,100,0,0.9) 0%,rgba(0,0,0,0.95) 70%); pointer-events:none; }
+.destruction-text { position:absolute; top:45%; left:50%; transform:translate(-50%,-50%); font-size:3em; font-weight:bold; color:#ffd700; text-shadow:0 0 30px #ff6600; animation:destruct-text 0.5s ease-out forwards; }
+@keyframes destruct-text { from{transform:translate(-50%,-50%) scale(0.1);opacity:0;} to{transform:translate(-50%,-50%) scale(1);opacity:1;} }
+
+.toggle-btn { padding:4px 14px; border-radius:20px; font-size:0.85em; cursor:pointer; border:1px solid #888; background:#444; color:#eee; }
+.toggle-btn.on { background:linear-gradient(135deg,#ff6b35,#ffd700); color:#1a1a2e; border-color:#ffd700; }
+.toggle-row { display:flex; align-items:center; justify-content:space-between; }
+
+#gameover-chaos-result { font-size:0.85em; color:#ff8855; margin-bottom:16px; min-height:1.2em; }
 </style>
 </head>
 <body>
 
 <!-- ===== ヘッダー ===== -->
 <div id="header">
-  <div id="title">3D Reversi</div>
+  <div id="title">3D Reversi<span id="chaos-badge">CHAOS</span></div>
   <div id="scores">
     <div class="score-box">
       <div class="score-dot black"></div>
@@ -183,6 +245,10 @@ button { padding: 6px 16px; border: none; border-radius: 6px; cursor: pointer; f
         <option value="hard">Hard</option>
       </select>
     </div>
+    <div class="setting-row toggle-row">
+      <label style="margin-bottom:0">カオスモード</label>
+      <button id="btn-chaos-toggle" class="toggle-btn on">ON</button>
+    </div>
     <button id="btn-close-settings">閉じる（ゲームをリセット）</button>
   </div>
 
@@ -190,8 +256,44 @@ button { padding: 6px 16px; border: none; border-radius: 6px; cursor: pointer; f
   <div id="gameover-modal">
     <h2 id="gameover-title">ゲーム終了</h2>
     <div id="gameover-result"></div>
+    <div id="gameover-chaos-result"></div>
     <button id="btn-rematch">再戦</button>
   </div>
+
+  <!-- カオスモード UI 要素群 -->
+  <div id="gravity-warning">⚠️ 傾けすぎ！石が滑り落ちる！</div>
+
+  <!-- チャージゲージ -->
+  <div id="charge-gauge">
+    <canvas id="charge-canvas" width="70" height="70"></canvas>
+  </div>
+
+  <!-- CPU 怒りバー -->
+  <div id="cpu-anger-bar">
+    <div class="label">CPU 感情</div>
+    <div id="anger-track"><div id="anger-fill"></div></div>
+    <div id="cpu-mood-text">(機嫌普通)</div>
+  </div>
+
+  <!-- くしゃみお守り -->
+  <div id="sneeze-charm"></div>
+
+  <!-- カオスメッセージ -->
+  <div id="chaos-msg"></div>
+
+  <!-- CPU 激怒モーダル -->
+  <div id="cpu-rage-modal">
+    <h3>😡 CPU がキレた！</h3>
+    <p>このまま負けるのは納得できない！<br>リセットするか？</p>
+    <button class="rage-btn" id="btn-refuse-reset">拒否する</button>
+    <button class="rage-btn" id="btn-allow-reset">まあいいか</button>
+  </div>
+
+  <!-- Zzz オーバーレイ -->
+  <div id="zzz-layer"></div>
+
+  <!-- 破壊オーバーレイ -->
+  <div id="destruction-overlay"></div>
 </div>
 
 <!-- ===== フッター ===== -->
@@ -394,18 +496,14 @@ function mat4Transpose(out, a) {
 // ============================================================
 // 2. GLSL シェーダー
 // ============================================================
-// 頂点シェーダー: MVP 変換 + ワールド空間での位置・法線を
-//   フラグメントシェーダーへ渡す。
-// フラグメントシェーダー: Blinn-Phong ライティング
-//   最終色 = uColor * (ambient + diffuse) + specular
 const VERT_SRC = `
-attribute vec3 aPosition;  /* ローカル座標 */
-attribute vec3 aNormal;    /* ローカル法線 */
-uniform mat4 uMVP;         /* Model-View-Projection 行列 */
-uniform mat4 uModel;       /* ワールド変換行列 */
-uniform mat4 uNormalMat;   /* 法線変換行列 = transpose(inverse(uModel)) */
-varying vec3 vNormal;      /* ワールド法線 (fs へ) */
-varying vec3 vWorldPos;    /* ワールド座標 (fs へ) */
+attribute vec3 aPosition;
+attribute vec3 aNormal;
+uniform mat4 uMVP;
+uniform mat4 uModel;
+uniform mat4 uNormalMat;
+varying vec3 vNormal;
+varying vec3 vWorldPos;
 void main(){
   vec4 worldPos = uModel * vec4(aPosition,1.0);
   vWorldPos = worldPos.xyz;
@@ -416,21 +514,21 @@ void main(){
 
 const FRAG_SRC = `
 precision mediump float;
-uniform vec3 uColor;      /* 石・ボードの基本色 */
-uniform vec3 uLightDir;   /* 平行光源の方向 (ワールド空間、正規化済みを想定) */
-uniform vec3 uCamPos;     /* カメラ位置 (ハーフベクトル計算に使用) */
-uniform float uShininess; /* 鏡面反射の鋭さ (大きいほどシャープ) */
-uniform float uAlpha;     /* 透明度 (ヒント石は 0.35 程度) */
+uniform vec3 uColor;
+uniform vec3 uLightDir;
+uniform vec3 uCamPos;
+uniform float uShininess;
+uniform float uAlpha;
 varying vec3 vNormal;
 varying vec3 vWorldPos;
 void main(){
   vec3 N = normalize(vNormal);
   vec3 L = normalize(uLightDir);
-  vec3 V = normalize(uCamPos - vWorldPos);       /* 視線ベクトル */
-  vec3 H = normalize(L + V);                     /* ハーフベクトル */
-  float amb  = 0.25;                             /* 環境光係数 */
-  float diff = max(dot(N,L), 0.0);              /* 拡散反射 */
-  float spec = pow(max(dot(N,H),0.0), uShininess); /* 鏡面反射 */
+  vec3 V = normalize(uCamPos - vWorldPos);
+  vec3 H = normalize(L + V);
+  float amb  = 0.25;
+  float diff = max(dot(N,L), 0.0);
+  float spec = pow(max(dot(N,H),0.0), uShininess);
   vec3 col = uColor * (amb + diff * 0.75) + vec3(1.0)*spec*0.6;
   gl_FragColor = vec4(col, uAlpha);
 }
@@ -440,21 +538,10 @@ void main(){
 // 3. メッシュ生成
 // ============================================================
 
-/**
- * 円柱メッシュを生成する (石に使用)
- * @param {number} radiusTop 上面半径
- * @param {number} radiusBot 下面半径
- * @param {number} height    高さ
- * @param {number} segs      円周分割数
- * @returns {{ verts, norms, indices }}
- */
 function createCylinder(radiusTop, radiusBot, height, segs) {
   const verts = [], norms = [], indices = [];
   const halfH = height / 2;
 
-  // ---- 側面 ----
-  // 各分割角度につき、上端と下端の頂点を 1 対生成する。
-  // 法線はテーパー角を考慮した傾き込みの外向き法線。
   for(let i=0;i<=segs;i++){
     const a = (i/segs)*Math.PI*2;
     const ca=Math.cos(a), sa=Math.sin(a);
@@ -469,13 +556,11 @@ function createCylinder(radiusTop, radiusBot, height, segs) {
       norms.push(nx/nl, ny/nl, nz/nl);
     }
   }
-  // 側面の三角形インデックス (クワッド 2 枚 → 三角 2 枚)
   for(let i=0;i<segs;i++){
     const b=i*2;
     indices.push(b,b+1,b+2, b+1,b+3,b+2);
   }
 
-  // ---- 上面キャップ ----
   const topCenter = verts.length/3;
   verts.push(0, halfH, 0); norms.push(0,1,0);
   for(let i=0;i<=segs;i++){
@@ -485,7 +570,6 @@ function createCylinder(radiusTop, radiusBot, height, segs) {
   }
   for(let i=0;i<segs;i++) indices.push(topCenter, topCenter+1+i, topCenter+2+i);
 
-  // ---- 下面キャップ ----
   const botCenter = verts.length/3;
   verts.push(0, -halfH, 0); norms.push(0,-1,0);
   for(let i=0;i<=segs;i++){
@@ -498,20 +582,15 @@ function createCylinder(radiusTop, radiusBot, height, segs) {
   return { verts: new Float32Array(verts), norms: new Float32Array(norms), indices: new Uint16Array(indices) };
 }
 
-/**
- * 直方体メッシュを生成する (ボード本体・フレーム・マス目に使用)
- * 各面を独立した 4 頂点で構成し、フラット法線を持つ。
- */
 function createBox(w, h, d) {
   const hw=w/2, hh=h/2, hd=d/2;
-  // 6 面 × 4 頂点、面ごとに並べて列挙 (前/後/上/下/右/左)
   const verts = [
-    -hw,-hh, hd,  hw,-hh, hd,  hw, hh, hd, -hw, hh, hd,  // 前 (+Z)
-    -hw,-hh,-hd, -hw, hh,-hd,  hw, hh,-hd,  hw,-hh,-hd,  // 後 (-Z)
-    -hw, hh,-hd, -hw, hh, hd,  hw, hh, hd,  hw, hh,-hd,  // 上 (+Y)
-    -hw,-hh,-hd,  hw,-hh,-hd,  hw,-hh, hd, -hw,-hh, hd,  // 下 (-Y)
-     hw,-hh,-hd,  hw, hh,-hd,  hw, hh, hd,  hw,-hh, hd,  // 右 (+X)
-    -hw,-hh,-hd, -hw,-hh, hd, -hw, hh, hd, -hw, hh,-hd,  // 左 (-X)
+    -hw,-hh, hd,  hw,-hh, hd,  hw, hh, hd, -hw, hh, hd,
+    -hw,-hh,-hd, -hw, hh,-hd,  hw, hh,-hd,  hw,-hh,-hd,
+    -hw, hh,-hd, -hw, hh, hd,  hw, hh, hd,  hw, hh,-hd,
+    -hw,-hh,-hd,  hw,-hh,-hd,  hw,-hh, hd, -hw,-hh, hd,
+     hw,-hh,-hd,  hw, hh,-hd,  hw, hh, hd,  hw,-hh, hd,
+    -hw,-hh,-hd, -hw,-hh, hd, -hw, hh, hd, -hw, hh,-hd,
   ];
   const norms = [
     0,0,1, 0,0,1, 0,0,1, 0,0,1,
@@ -538,9 +617,8 @@ if(!gl) alert('WebGL not supported');
 
 gl.enable(gl.DEPTH_TEST);
 gl.enable(gl.BLEND);
-gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // 半透明ヒント石に対応
+gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-/** GLSL ソースをコンパイルしてシェーダーオブジェクトを返す */
 function compileShader(type, src) {
   const s = gl.createShader(type);
   gl.shaderSource(s, src);
@@ -549,7 +627,6 @@ function compileShader(type, src) {
   return s;
 }
 
-/** 頂点・フラグメントシェーダーをリンクしてプログラムを返す */
 function createProgram(vs, fs) {
   const p = gl.createProgram();
   gl.attachShader(p, vs);
@@ -564,7 +641,6 @@ const prog = createProgram(
   compileShader(gl.FRAGMENT_SHADER, FRAG_SRC)
 );
 
-// シェーダー変数のロケーションをまとめて取得しておく
 const loc = {
   aPosition:  gl.getAttribLocation(prog,'aPosition'),
   aNormal:    gl.getAttribLocation(prog,'aNormal'),
@@ -578,15 +654,6 @@ const loc = {
   uAlpha:     gl.getUniformLocation(prog,'uAlpha'),
 };
 
-/**
- * メッシュデータを GPU にアップロードして VAO 相当の情報を返す。
- * WebGL 1.0 には VAO 拡張が必要なため、代わりに VBO/IBO のペアと
- * 頂点数を持つオブジェクトを返す。
- *
- * VBO レイアウト (インターリーブ、stride = 24 bytes):
- *   [0..11]  position (vec3, float×3)
- *   [12..23] normal   (vec3, float×3)
- */
 function createVAO(mesh) {
   const vbo = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
@@ -609,21 +676,18 @@ function createVAO(mesh) {
   return { vbo, ibo, count: mesh.indices.length };
 }
 
-/** VBO/IBO をバインドして頂点属性ポインタを設定する */
 function bindVAO(vao) {
   gl.bindBuffer(gl.ARRAY_BUFFER, vao.vbo);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vao.ibo);
-  const stride = 24; // 6 floats × 4 bytes
+  const stride = 24;
   gl.enableVertexAttribArray(loc.aPosition);
   gl.vertexAttribPointer(loc.aPosition, 3, gl.FLOAT, false, stride, 0);
   gl.enableVertexAttribArray(loc.aNormal);
   gl.vertexAttribPointer(loc.aNormal,   3, gl.FLOAT, false, stride, 12);
 }
 
-// ---- GPU へアップロード済みメッシュ群 ----
-const diskVAO     = createVAO(createCylinder(0.38, 0.38, 0.12, 24)); // 石 (扁平円柱)
-const boardBoxVAO = createVAO(createBox(8.0, 0.18, 8.0));            // ボード本体
-// ボード四辺フレーム: 前後 2 本 (X方向) + 左右 2 本 (Z方向)
+const diskVAO     = createVAO(createCylinder(0.38, 0.38, 0.12, 24));
+const boardBoxVAO = createVAO(createBox(8.0, 0.18, 8.0));
 const frameBoxes = [
   createVAO(createBox(8.4, 0.28, 0.3)),
   createVAO(createBox(8.4, 0.28, 0.3)),
@@ -636,26 +700,20 @@ const framePositions = [
   [-4.15, 0.05, 0],
   [ 4.15, 0.05, 0],
 ];
-const cellVAO = createVAO(createBox(0.96, 0.001, 0.96)); // マス目 1 つ分の薄い板
+const cellVAO = createVAO(createBox(0.96, 0.001, 0.96));
 
 // ============================================================
 // 5. カメラ制御 (球座標系)
 // ============================================================
-// カメラ位置を球座標 (radius, theta, phi) で管理し、
-// ドラッグ操作で theta/phi を更新する。
-//   theta : 天頂角 (0 = 真上, π/2 = 水平)  ← ジンバルロック回避のため制限あり
-//   phi   : 方位角 (0 = +Z 方向から時計回り)
-// ドラッグ離し後に vTheta/vPhi で慣性減衰させる。
 const camera = {
-  theta:  0.6,       // 初期値: やや俯瞰
-  phi:    0.5,       // 初期値: 斜め前方
-  radius: 14,        // 注視点からの距離
-  target: [0, 0, 0], // 注視点 (右ドラッグで移動)
-  vTheta: 0,         // 角速度 (慣性用)
+  theta:  0.6,
+  phi:    0.5,
+  radius: 14,
+  target: [0, 0, 0],
+  vTheta: 0,
   vPhi:   0,
 };
 
-/** 球座標からカメラのワールド位置を計算して返す */
 function getCameraPos() {
   const { radius: r, theta: t, phi: p, target } = camera;
   return [
@@ -665,7 +723,6 @@ function getCameraPos() {
   ];
 }
 
-/** カメラを初期状態に戻す */
 function resetCamera() {
   camera.theta  = 0.6;
   camera.phi    = 0.5;
@@ -679,22 +736,16 @@ function resetCamera() {
 // 6. ゲームロジック
 // ============================================================
 const BLACK = 1, WHITE = 2;
-// 8 方向: 縦・横・斜め
 const DIRS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
 
-// ゲーム状態変数
-let board         = null;  // 8×8 配列: 0=空, 1=BLACK, 2=WHITE
+let board         = null;
 let currentPlayer = BLACK;
-let gameMode      = '1p';  // '1p' | '2p'
-let cpuDiff       = 'normal'; // 'easy' | 'normal' | 'hard'
+let gameMode      = '1p';
+let cpuDiff       = 'normal';
 let gameOver      = false;
 let showHints     = true;
 let cpuThinking   = false;
 
-/**
- * 位置評価テーブル (CPU の評価関数で使用)
- * 角 (100) が最高価値、角の隣接マス (-20, -40) は危険地帯。
- */
 const POS_WEIGHT = [
   [100,-20,10,5,5,10,-20,100],
   [-20,-40,-5,-5,-5,-5,-40,-20],
@@ -706,7 +757,6 @@ const POS_WEIGHT = [
   [100,-20,10,5,5,10,-20,100],
 ];
 
-/** 初期配置 (中央 2×2 に黒白を交互に) */
 function newBoard() {
   const b = new Array(8).fill(null).map(() => new Array(8).fill(0));
   b[3][3]=WHITE; b[3][4]=BLACK;
@@ -714,11 +764,6 @@ function newBoard() {
   return b;
 }
 
-/**
- * (row, col) に player が石を置いたとき返せる石の座標一覧を返す。
- * 置けない場合は空配列。
- * 注意: b[row][col] === 0 でない場合は即座に [] を返す。
- */
 function getFlips(b, row, col, player) {
   if(b[row][col] !== 0) return [];
   const opp = player === BLACK ? WHITE : BLACK;
@@ -726,19 +771,16 @@ function getFlips(b, row, col, player) {
   for(const [dr, dc] of DIRS) {
     const line = [];
     let r = row+dr, c = col+dc;
-    // 相手の石が続く限りたどる
     while(r>=0 && r<8 && c>=0 && c<8 && b[r][c]===opp) {
       line.push([r, c]);
       r+=dr; c+=dc;
     }
-    // ラインの先が自分の石なら挟み成立
     if(line.length > 0 && r>=0 && r<8 && c>=0 && c<8 && b[r][c]===player)
       flips.push(...line);
   }
   return flips;
 }
 
-/** player が着手可能なマス一覧を返す */
 function getMoves(b, player) {
   const moves = [];
   for(let r=0;r<8;r++) for(let c=0;c<8;c++)
@@ -746,22 +788,14 @@ function getMoves(b, player) {
   return moves;
 }
 
-/**
- * (row, col) に player が着手した結果の新盤面を返す。
- * 元の盤面 b は変更しない (イミュータブル操作)。
- * 重要: getFlips は着手前の盤面 b で呼ぶこと。
- *   石を置いた後の nb で呼ぶと b[row][col]!==0 の早期リターンに
- *   引っかかって常に空配列が返ってしまうため。
- */
 function applyMove(b, row, col, player) {
   const nb = b.map(r => [...r]);
-  const flips = getFlips(b, row, col, player); // 元の盤面で計算
+  const flips = getFlips(b, row, col, player);
   nb[row][col] = player;
   for(const [r,c] of flips) nb[r][c] = player;
   return { board: nb, flips };
 }
 
-/** 盤面の黒・白の石数をカウントして返す */
 function countStones(b) {
   let black=0, white=0;
   for(let r=0;r<8;r++) for(let c=0;c<8;c++){
@@ -775,13 +809,6 @@ function countStones(b) {
 // 7. CPU AI (Minimax / α-β 枝刈り)
 // ============================================================
 
-/**
- * 静的評価関数: player 側から見たスコアを返す。
- * 要素:
- *   - 位置評価テーブルによる重み付きスコア
- *   - 着手可能数 (mobility) の差 × 5
- *   - 石数差 × 2
- */
 function evaluate(b, player) {
   const opp = player === BLACK ? WHITE : BLACK;
   let score = 0;
@@ -797,25 +824,13 @@ function evaluate(b, player) {
   return score;
 }
 
-/**
- * Minimax 探索 (オプションで α-β 枝刈り)
- * @param {number[][]} b         探索対象の盤面
- * @param {number}     depth     残り探索深さ
- * @param {number}     alpha     α値 (最大化側の下限)
- * @param {number}     beta      β値 (最小化側の上限)
- * @param {boolean}    maximizing true なら player の手番
- * @param {number}     player    CPU 側のプレイヤー
- * @param {boolean}    useAB     α-β 枝刈りを使うか
- */
 function minimax(b, depth, alpha, beta, maximizing, player, useAB) {
   const opp       = player === BLACK ? WHITE : BLACK;
   const curPlayer = maximizing ? player : opp;
   const moves     = getMoves(b, curPlayer);
 
-  // 終端条件: 深さ 0 または着手不能
   if(depth===0 || moves.length===0){
     if(moves.length===0) {
-      // 相手も打てなければゲーム終了 → 大きな重みで石数差を返す
       const oppMoves = getMoves(b, maximizing ? opp : player);
       if(oppMoves.length===0) {
         const cnt = countStones(b);
@@ -848,12 +863,6 @@ function minimax(b, depth, alpha, beta, maximizing, player, useAB) {
   }
 }
 
-/**
- * 難易度に応じた CPU の最善手を返す。
- *   easy:   ランダム
- *   normal: Minimax 深さ 3 (枝刈りなし)
- *   hard:   Minimax + α-β 枝刈り 深さ 6
- */
 function cpuMove(b, player) {
   const moves = getMoves(b, player);
   if(moves.length === 0) return null;
@@ -873,35 +882,16 @@ function cpuMove(b, player) {
 // ============================================================
 // 8. アニメーションシステム
 // ============================================================
-// アニメーションは 2 つのデータ構造で管理する:
-//   animations[]  : 現在動いているアニメーション全件のリスト (tick で更新・削除)
-//   diskAnims{}   : キー "row,col" → アニメーション参照 (レンダリング時の高速ルックアップ用)
-//
-// アニメーションオブジェクトの共通フィールド:
-//   type     : 'drop' | 'flip' | 'win'
-//   progress : 経過時間 [秒]。flip の場合はディレイ分だけ負の値から始まる。
-//   row, col : 対象マス座標
-//
-// flip の progress 初期値: -(delay_ms / 400)
-//   progress < 0  : ディレイ待機中 (まだアニメーション開始していない)
-//   progress 0→0.4 : フリップアニメーション実行中 (smooth step で 0→π rad)
+const animations = [];
+const diskAnims  = {};
+const hintBob    = {};
 
-const animations = []; // アクティブなアニメーションの配列
-const diskAnims  = {}; // "row,col" -> animation オブジェクトへの参照
-const hintBob    = {}; // "row,col" -> 浮遊アニメーションの位相オフセット
-
-/** 石配置アニメーション (上からドロップ) を登録する */
 function addDropAnim(row, col) {
   const key = `${row},${col}`;
   diskAnims[key] = { type:'drop', progress:0, row, col };
   animations.push(diskAnims[key]);
 }
 
-/**
- * 石フリップアニメーションを登録する。
- * @param {number} delay ディレイ [ms]。置いた石からの距離で遅らせる。
- *                       progress = -delay/400 から開始し、0 になった時点でアニメ開始。
- */
 function addFlipAnim(row, col, delay) {
   const key  = `${row},${col}`;
   const anim = { type:'flip', progress: -delay/400, row, col };
@@ -909,7 +899,6 @@ function addFlipAnim(row, col, delay) {
   animations.push(anim);
 }
 
-/** 勝利ジャンプアニメーションを勝者の全石に登録する */
 function addWinAnim(cells) {
   for(const [r,c] of cells) {
     const key  = `${r},${c}`;
@@ -919,16 +908,11 @@ function addWinAnim(cells) {
   }
 }
 
-/**
- * 各アニメーションの progress を dt だけ進め、完了したものを削除する。
- * render() のたびに呼ばれる。
- */
 let lastTime = 0;
 function updateAnimations(dt) {
   for(let i=animations.length-1; i>=0; i--) {
     const a = animations[i];
     a.progress += dt;
-    // 完了判定: 各アニメーションの所要時間を超えたら削除
     const done = (a.type==='drop' && a.progress >= 0.3)
               || (a.type==='flip' && a.progress >= 0.4)
               || (a.type==='win'  && a.progress >= 0.6);
@@ -940,16 +924,44 @@ function updateAnimations(dt) {
 }
 
 // ============================================================
+// カオスモード — 状態変数
+// ============================================================
+let chaosMode = true;
+
+// 重力
+let stoneWobble = 0;
+let gravitySliding = false;
+let gravSlideStart = 0;
+let gravSlideDir = [1, 0]; // [dx, dz]
+let stoneSlideOffset = {}; // "r,c" -> {ox, oz, oy}
+let gravSlideCounted = new Set(); // 重力落下カウント済みキー
+
+// チャージ
+let pressStartTime = 0;
+let chargeX = 0, chargeY = 0;
+let isCharging = false;
+
+// CPU感情
+let cpuAnger = 0;
+let cpuLastEvals = [];
+let cpuHasRaged = false;
+let cpuRageRefused = false;
+
+// くしゃみ
+let sneezeCharms = {};  // player -> count
+let consecutiveSneezes = 0;
+let sneezeBlocked = false;
+let fallingStones = []; // {row,col,color,ox,oz,oy,vx,vz,vy,t}
+let chaosDroppedCount = 0; // 重力で落ちた石数
+
+// サボり
+let sleepTimer = {};   // "r,c" -> turns
+let flipCount = {};    // "r,c" -> total flips
+let rebellingStones = new Set(); // currently rebelling "r,c"
+
+// ============================================================
 // 9. レンダリング
 // ============================================================
-// フレームごとに以下の順で描画:
-//   1. ボード (市松模様のマス目 × 64)
-//   2. ボード本体 (木目調の直方体)
-//   3. ボードフレーム (4 辺)
-//   4. 着手ヒント (半透明の浮遊石)
-//   5. 盤上の全石 (drop/flip/win アニメーション適用)
-
-// render で使い回す行列バッファ (毎フレーム new を避けてGCを抑制)
 const projMat   = mat4();
 const viewMat   = mat4();
 const vpMat     = mat4();
@@ -957,16 +969,11 @@ const mvpMat    = mat4();
 const modelMat  = mat4();
 const normalMat = mat4();
 
-/**
- * モデル行列を使って vao を描画する。
- * 法線行列 = transpose(inverse(model)) を自動計算して渡す。
- */
 function drawMesh(vao, model, color, shininess, alpha=1.0) {
   bindVAO(vao);
   mat4Multiply(mvpMat, vpMat, model);
   gl.uniformMatrix4fv(loc.uMVP,       false, mvpMat);
   gl.uniformMatrix4fv(loc.uModel,     false, model);
-  // 法線行列: モデル行列に非一様スケールがある場合でも法線が正しくなる
   mat4Invert(normalMat, model);
   mat4Transpose(normalMat, normalMat);
   gl.uniformMatrix4fv(loc.uNormalMat, false, normalMat);
@@ -976,18 +983,13 @@ function drawMesh(vao, model, color, shininess, alpha=1.0) {
   gl.drawElements(gl.TRIANGLES, vao.count, gl.UNSIGNED_SHORT, 0);
 }
 
-/**
- * drop/win アニメーション中の Y 方向オフセットを返す。
- * drop: 高さ 3 から放物線落下 → 着地バウンス
- * win:  sin カーブで跳び上がる
- */
 function getDiskYOffset(row, col) {
   const a = diskAnims[`${row},${col}`];
   if(!a) return 0;
   if(a.type==='drop') {
     const p = Math.max(0, a.progress) / 0.3;
-    if(p < 0.7) return 3 * (1-p/0.7) * (1-p/0.7); // 落下
-    else        return Math.sin((p-0.7)/0.3 * Math.PI) * 0.3; // バウンス
+    if(p < 0.7) return 3 * (1-p/0.7) * (1-p/0.7);
+    else        return Math.sin((p-0.7)/0.3 * Math.PI) * 0.3;
   }
   if(a.type==='win') {
     const p = Math.min(1, Math.max(0, a.progress) / 0.6);
@@ -996,76 +998,181 @@ function getDiskYOffset(row, col) {
   return 0;
 }
 
-/**
- * flip アニメーション中の Y 軸回転角を返す (0 〜 π)。
- * progress < 0 の待機中は 0 を返す。
- * smooth step (3t²-2t³) で滑らかに加速・減速する。
- */
 function getDiskFlipAngle(row, col) {
   const a = diskAnims[`${row},${col}`];
   if(!a || a.type!=='flip') return 0;
   const t = Math.max(0, a.progress);
   const p = Math.min(1, t / 0.4);
-  const s = p*p*(3-2*p); // smooth step
+  const s = p*p*(3-2*p);
   return s * Math.PI;
 }
 
-/**
- * ヒント石の浮遊 Y 座標を返す。
- * マスごとにランダムな位相オフセットを持つことで、
- * 全マスが同期して動かないようにする。
- */
 function getHintY(row, col, time) {
   const key = `${row},${col}`;
   if(!hintBob[key]) hintBob[key] = Math.random() * Math.PI * 2;
   return Math.sin(time * 2 + hintBob[key]) * 0.08 + 0.1;
 }
 
-/**
- * ボード座標 (row, col) をワールド座標に変換する。
- * ボード中央が原点。Y は盤面上面の高さ。
- */
 function cellToWorld(row, col) {
-  const S = 1.0; // 1 マスのサイズ
+  const S = 1.0;
   return [col*S - 3.5*S, 0.09 + 0.06, row*S - 3.5*S];
 }
 
-/** メインレンダリングループ (requestAnimationFrame で呼ばれ続ける) */
+/** ワールド座標をスクリーン座標に変換する */
+function worldToScreen(wx, wy, wz) {
+  const clipX = vpMat[0]*wx + vpMat[4]*wy + vpMat[8]*wz + vpMat[12];
+  const clipY = vpMat[1]*wx + vpMat[5]*wy + vpMat[9]*wz + vpMat[13];
+  const clipW = vpMat[3]*wx + vpMat[7]*wy + vpMat[11]*wz + vpMat[15];
+  if (clipW <= 0) return null;
+  const ndcX = clipX / clipW, ndcY = clipY / clipW;
+  const rect = canvas.getBoundingClientRect();
+  return [
+    (ndcX + 1) * 0.5 * rect.width + rect.left,
+    (1 - ndcY) * 0.5 * rect.height + rect.top
+  ];
+}
+
+/** フローティングテキストを表示する */
+function showFloatText(text, screenX, screenY) {
+  const container = document.getElementById('canvas-container');
+  const rect = container.getBoundingClientRect();
+  const div = document.createElement('div');
+  div.className = 'float-text';
+  div.textContent = text;
+  div.style.left = (screenX - rect.left) + 'px';
+  div.style.top = (screenY - rect.top) + 'px';
+  container.appendChild(div);
+  setTimeout(() => div.remove(), 1400);
+}
+
+function showFloatTextCenter(text) {
+  const container = document.getElementById('canvas-container');
+  const div = document.createElement('div');
+  div.className = 'float-text';
+  div.textContent = text;
+  div.style.left = '50%';
+  div.style.top = '45%';
+  div.style.fontSize = '1.8em';
+  div.style.color = '#ffd700';
+  div.style.textShadow = '0 0 15px rgba(255,200,0,0.8)';
+  container.appendChild(div);
+  setTimeout(() => div.remove(), 1600);
+}
+
+function showChaosMsg(text, duration) {
+  const el = document.getElementById('chaos-msg');
+  el.textContent = text;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', duration);
+}
+
+/** Zzz オーバーレイを更新する */
+function updateZzzOverlay() {
+  const layer = document.getElementById('zzz-layer');
+  layer.innerHTML = '';
+  if (!chaosMode) return;
+  for (let r=0; r<8; r++) for (let c=0; c<8; c++) {
+    if (board[r][c] === 0) continue;
+    const st = sleepTimer[`${r},${c}`] || 0;
+    if (st < 3) continue;
+    const [wx, wy, wz] = cellToWorld(r, c);
+    const screen = worldToScreen(wx, wy + 0.4, wz);
+    if (!screen) continue;
+    const div = document.createElement('div');
+    div.className = 'zzz-item';
+    div.textContent = st >= 6 ? 'Zzz...' : 'z..';
+    div.style.left = screen[0] + 'px';
+    div.style.top = screen[1] + 'px';
+    layer.appendChild(div);
+  }
+}
+
+/** チャージゲージを描画する */
+function drawChargeGauge() {
+  const gauge = document.getElementById('charge-gauge');
+  const cc = document.getElementById('charge-canvas');
+  gauge.style.left = chargeX + 'px';
+  gauge.style.top = chargeY + 'px';
+  gauge.style.display = 'block';
+  const ctx = cc.getContext('2d');
+  const held = Date.now() - pressStartTime;
+  const pct = Math.min(1, held / 3000);
+  ctx.clearRect(0, 0, 70, 70);
+  ctx.beginPath(); ctx.arc(35,35,28,0,Math.PI*2);
+  ctx.strokeStyle='rgba(0,0,0,0.5)'; ctx.lineWidth=6; ctx.stroke();
+  const color = pct < 0.5 ? '#44ff88' : pct < 0.833 ? '#ffaa00' : '#ff2200';
+  ctx.beginPath(); ctx.arc(35,35,28,-Math.PI/2,-Math.PI/2+pct*Math.PI*2);
+  ctx.strokeStyle=color; ctx.lineWidth=6; ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(`${(held/1000).toFixed(1)}s`, 35, 35);
+}
+
+function hideChargeGauge() {
+  document.getElementById('charge-gauge').style.display = 'none';
+}
+
+/** メインレンダリングループ */
 function render(time) {
-  const dt = (time - lastTime) / 1000; // 秒
+  const dt = Math.min((time - lastTime) / 1000, 0.1); // capdt at 100ms
   lastTime = time;
 
-  // キャンバスの CSS サイズが変わったら WebGL 解像度を合わせる
   const w = canvas.clientWidth, h = canvas.clientHeight;
   if(canvas.width !== w || canvas.height !== h){
     canvas.width = w; canvas.height = h;
     gl.viewport(0, 0, w, h);
   }
 
-  // カメラ慣性: ドラッグ中でないとき角速度を 0.85 倍ずつ減衰させ続ける
   if(!mouseDown) {
     camera.phi   += camera.vPhi;
     camera.theta += camera.vTheta;
     camera.vPhi   *= 0.85;
     camera.vTheta *= 0.85;
   }
-  // theta を [0.1, π*0.48] にクランプしてジンバルロック・反転を防ぐ
-  camera.theta = Math.max(0.1, Math.min(Math.PI * 0.48, camera.theta));
 
-  // --- 行列更新 ---
+  // カオスモード: theta クランプを拡張
+  if (chaosMode) {
+    camera.theta = Math.max(0.05, Math.min(Math.PI * 0.52, camera.theta));
+    // 警告ゾーン
+    const gravWarn = document.getElementById('gravity-warning');
+    if (camera.theta > Math.PI * 0.37) {
+      gravWarn.style.display = 'block';
+      stoneWobble = (camera.theta - Math.PI * 0.37) / (Math.PI * 0.15);
+    } else {
+      gravWarn.style.display = 'none';
+      stoneWobble = 0;
+    }
+    // 危険ゾーン
+    if (camera.theta > Math.PI * 0.45 && !gravitySliding && !gameOver) {
+      triggerGravitySlide();
+    }
+    // 重力スライド更新
+    if (gravitySliding) {
+      updateGravitySlide(dt);
+    }
+  } else {
+    camera.theta = Math.max(0.1, Math.min(Math.PI * 0.48, camera.theta));
+  }
+
+  // mousemove clamp も同様に行う (移動時クランプ)
+  if (chaosMode) {
+    camera.theta = Math.max(0.05, Math.min(Math.PI * 0.52, camera.theta));
+  } else {
+    camera.theta = Math.max(0.1, Math.min(Math.PI * 0.48, camera.theta));
+  }
+
   const camPos = getCameraPos();
   mat4Perspective(projMat, Math.PI/4, w/h, 0.1, 100);
   mat4LookAt(viewMat, camPos, camera.target, [0,1,0]);
-  mat4Multiply(vpMat, projMat, viewMat); // VP = Proj × View
+  mat4Multiply(vpMat, projMat, viewMat);
 
   gl.clearColor(0.12, 0.12, 0.18, 1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   gl.useProgram(prog);
-  gl.uniform3fv(loc.uLightDir, [0.6, 1.0, 0.5]); // 平行光源 (斜め上方から)
+  gl.uniform3fv(loc.uLightDir, [0.6, 1.0, 0.5]);
   gl.uniform3fv(loc.uCamPos,   camPos);
 
-  // ---- 1. ボード市松模様 (64 マス) ----
+  // ---- 1. ボード市松模様 ----
   for(let r=0;r<8;r++) for(let c=0;c<8;c++){
     mat4Identity(modelMat);
     mat4Translate(modelMat, modelMat, [c-3.5, 0, r-3.5]);
@@ -1073,19 +1180,19 @@ function render(time) {
     drawMesh(cellVAO, modelMat, dark ? [0.10,0.36,0.16] : [0.18,0.54,0.24], 5);
   }
 
-  // ---- 2. ボード本体 (木目調) ----
+  // ---- 2. ボード本体 ----
   mat4Identity(modelMat);
   mat4Translate(modelMat, modelMat, [0, -0.09, 0]);
   drawMesh(boardBoxVAO, modelMat, [0.42, 0.22, 0.06], 5);
 
-  // ---- 3. ボードフレーム (4 辺) ----
+  // ---- 3. ボードフレーム ----
   for(let i=0;i<4;i++){
     mat4Identity(modelMat);
     mat4Translate(modelMat, modelMat, framePositions[i]);
     drawMesh(frameBoxes[i], modelMat, [0.35, 0.18, 0.04], 5);
   }
 
-  // ---- 4. 着手ヒント (半透明浮遊石) ----
+  // ---- 4. 着手ヒント ----
   if(showHints && !gameOver && !cpuThinking) {
     const moves = getMoves(board, currentPlayer);
     for(const [r,c] of moves) {
@@ -1093,43 +1200,320 @@ function render(time) {
       mat4Identity(modelMat);
       mat4Translate(modelMat, modelMat, [wx, getHintY(r,c,time/1000), wz]);
       const hintColor = currentPlayer===BLACK ? [0.15,0.15,0.15] : [0.9,0.9,0.85];
-      drawMesh(diskVAO, modelMat, hintColor, 20, 0.35); // alpha=0.35 で半透明
+      drawMesh(diskVAO, modelMat, hintColor, 20, 0.35);
     }
   }
 
   // ---- 5. 盤上の全石 ----
   updateAnimations(dt);
+  const wobbleTime = time / 1000;
   for(let r=0;r<8;r++) for(let c=0;c<8;c++){
     if(board[r][c] === 0) continue;
 
+    const key = `${r},${c}`;
     const [wx,,wz] = cellToWorld(r, c);
     const yOff     = getDiskYOffset(r, c);
     const flipAngle= getDiskFlipAngle(r, c);
 
+    // スライドオフセット (重力)
+    const slide = stoneSlideOffset[key] || {ox:0,oz:0,oy:0};
+
+    // ウォブル (重力警告ゾーン)
+    let wobbleX = 0, wobbleZ = 0;
+    if (chaosMode && stoneWobble > 0) {
+      const wobbleAmp = stoneWobble * 0.05;
+      wobbleX = Math.sin(wobbleTime * 8 + r * 1.3 + c * 0.7) * wobbleAmp;
+      wobbleZ = Math.cos(wobbleTime * 7 + r * 0.9 + c * 1.1) * wobbleAmp;
+    }
+
     mat4Identity(modelMat);
-    mat4Translate(modelMat, modelMat, [wx, yOff, wz]);
+    mat4Translate(modelMat, modelMat, [wx + slide.ox + wobbleX, yOff + slide.oy, wz + slide.oz + wobbleZ]);
     if(flipAngle !== 0) mat4RotateY(modelMat, modelMat, flipAngle);
 
-    // ----- フリップ中の色制御 -----
-    // board はアニメーション開始前に新しい色へ更新済み。
-    // そのため何もしないと最初から新色で表示されてしまう。
-    //
-    // ルール:
-    //   a) diskAnims にエントリがある (アニメーション登録済み) かつ
-    //      progress < 0 (ディレイ待機中): → 旧色を表示
-    //   b) progress >= 0 かつ flipAngle < π/2 (フリップ前半): → 旧色を表示
-    //   c) progress >= 0 かつ flipAngle >= π/2 (フリップ後半): → 新色を表示
-    //   d) diskAnims にエントリなし: → board の色をそのまま表示
     let isBlack = board[r][c] === BLACK;
-    const anim  = diskAnims[`${r},${c}`];
+    const anim  = diskAnims[key];
     if(anim && anim.type==='flip' && (anim.progress < 0 || flipAngle < Math.PI/2)) {
-      isBlack = !isBlack; // 旧色を表示するために反転
+      isBlack = !isBlack;
     }
-    const diskColor = isBlack ? [0.08,0.08,0.10] : [0.92,0.90,0.85];
+
+    // カオス: 反乱中は紫色
+    let diskColor;
+    if (chaosMode && rebellingStones.has(key)) {
+      diskColor = [0.6, 0.1, 0.8];
+    } else if (chaosMode) {
+      // サボり: 眠り具合で青みを帯びる
+      const st = sleepTimer[key] || 0;
+      if (st >= 6) {
+        diskColor = isBlack ? [0.05,0.10,0.35] : [0.7,0.75,0.95];
+      } else if (st >= 3) {
+        diskColor = isBlack ? [0.06,0.08,0.22] : [0.82,0.86,0.95];
+      } else {
+        diskColor = isBlack ? [0.08,0.08,0.10] : [0.92,0.90,0.85];
+      }
+    } else {
+      diskColor = isBlack ? [0.08,0.08,0.10] : [0.92,0.90,0.85];
+    }
+
     drawMesh(diskVAO, modelMat, diskColor, isBlack ? 30 : 20);
   }
 
+  // ---- 6. 落下中の石 (fallingStones) ----
+  if (chaosMode) {
+    for (let i = fallingStones.length - 1; i >= 0; i--) {
+      const fs = fallingStones[i];
+      fs.t += dt;
+      fs.vy -= 9.8 * dt; // 重力
+      fs.ox += fs.vx * dt;
+      fs.oz += fs.vz * dt;
+      fs.oy += fs.vy * dt;
+      // 画面外 (y < -10) になったら削除
+      if (fs.oy < -10) {
+        fallingStones.splice(i, 1);
+        continue;
+      }
+      const [wx,,wz] = cellToWorld(fs.row, fs.col);
+      mat4Identity(modelMat);
+      mat4Translate(modelMat, modelMat, [wx + fs.ox, fs.oy + 0.15, wz + fs.oz]);
+      mat4RotateY(modelMat, modelMat, fs.t * 5);
+      const isBlk = fs.color === BLACK;
+      drawMesh(diskVAO, modelMat, isBlk ? [0.08,0.08,0.10] : [0.92,0.90,0.85], isBlk ? 30 : 20);
+    }
+  }
+
+  // ---- 7. カオス UI 更新 ----
+  if (chaosMode) {
+    updateZzzOverlay();
+    if (isCharging) drawChargeGauge();
+  }
+
   requestAnimationFrame(render);
+}
+
+// ============================================================
+// カオスモード — 機能実装
+// ============================================================
+
+/** 重力スライドを開始する */
+function triggerGravitySlide() {
+  if (gravitySliding) return;
+  gravitySliding = true;
+  gravSlideStart = performance.now();
+  gravSlideDir = [Math.sin(camera.phi), Math.cos(camera.phi)];
+  showChaosMsg('⚠️ 重力に負けた！\n石が滑り落ちていく...', 3000);
+  document.getElementById('gravity-warning').style.display = 'none';
+}
+
+/** 重力スライドアニメーションを更新する */
+function updateGravitySlide(dt) {
+  const elapsed = (performance.now() - gravSlideStart) / 1000;
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    if (board[r][c] === 0) continue;
+    const key = `${r},${c}`;
+    const t = Math.max(0, elapsed - 0.3);
+    if (!stoneSlideOffset[key]) stoneSlideOffset[key] = {ox:0,oz:0,oy:0};
+    const speed = t * t * 3;
+    stoneSlideOffset[key].ox = gravSlideDir[0] * speed;
+    stoneSlideOffset[key].oz = gravSlideDir[1] * speed;
+    if (speed > 4) {
+      stoneSlideOffset[key].oy = -(speed - 4) * 2;
+      if (!gravSlideCounted.has(key)) {
+        gravSlideCounted.add(key);
+        chaosDroppedCount++;
+      }
+    }
+  }
+  if (elapsed > 2.5 && !gameOver) {
+    endGame();
+    gravitySliding = false;
+  }
+}
+
+/** CPU 怒りバーを更新する */
+function updateCpuAngerUI() {
+  if (!chaosMode || gameMode !== '1p') return;
+  const bar = document.getElementById('cpu-anger-bar');
+  bar.style.display = 'block';
+  document.getElementById('anger-fill').style.width = cpuAnger + '%';
+  const moodEl = document.getElementById('cpu-mood-text');
+  if (cpuAnger < 30) moodEl.textContent = '(機嫌普通)';
+  else if (cpuAnger < 60) moodEl.textContent = '😠 ムカムカ...';
+  else if (cpuAnger < 90) moodEl.textContent = '😡 頭に来た！';
+  else moodEl.textContent = '🤬 限界！！';
+}
+
+/** CPU が怒り爆発して石を投げる */
+function triggerCpuRage() {
+  const emptyCells = [];
+  for (let r=0; r<8; r++) for (let c=0; c<8; c++)
+    if (board[r][c] === 0) emptyCells.push([r,c]);
+  if (emptyCells.length === 0) return;
+  const [r, c] = emptyCells[Math.floor(Math.random()*emptyCells.length)];
+  board[r][c] = WHITE;
+  addDropAnim(r, c);
+  const screen = worldToScreen(...cellToWorld(r, c));
+  if (screen) showFloatText('💢 投げた！', screen[0], screen[1]);
+  document.getElementById('cpu-mood-text').textContent = '💢 石を投げた！';
+  updateUI();
+  setTimeout(() => {
+    if (document.getElementById('cpu-mood-text').textContent === '💢 石を投げた！')
+      document.getElementById('cpu-mood-text').textContent = '(落ち着いた...)';
+  }, 2000);
+}
+
+/** くしゃみお守り UI を更新する */
+function updateSneezeCharmUI() {
+  const container = document.getElementById('sneeze-charm');
+  container.innerHTML = '';
+  let hasAny = false;
+  for (const p of [BLACK, WHITE]) {
+    const count = sneezeCharms[p] || 0;
+    if (count > 0) {
+      hasAny = true;
+      const div = document.createElement('div');
+      div.className = 'charm-item';
+      div.textContent = `🧿 ${p===BLACK?'黒':'白'} くしゃみ除け ×${count}`;
+      div.title = 'クリックして次のくしゃみを防ぐ';
+      div.addEventListener('click', () => {
+        if ((sneezeCharms[p]||0) > 0 && currentPlayer === p) {
+          sneezeCharms[p]--;
+          sneezeBlocked = true;
+          showFloatTextCenter('🧿 くしゃみ除け セット！');
+          updateSneezeCharmUI();
+        }
+      });
+      container.appendChild(div);
+    }
+  }
+  container.style.display = hasAny ? 'flex' : 'none';
+}
+
+/** くしゃみ乱流を発動する */
+function triggerSneeze() {
+  if (sneezeBlocked) {
+    sneezeBlocked = false;
+    updateSneezeCharmUI();
+    showFloatTextCenter('🧿 お守り発動！くしゃみを防いだ！');
+    return;
+  }
+  consecutiveSneezes++;
+  const cc = document.getElementById('canvas-container');
+  cc.classList.remove('shake');
+  void cc.offsetWidth;
+  cc.classList.add('shake');
+
+  showFloatTextCenter('🤧 ハックション！');
+  if (consecutiveSneezes >= 2) {
+    setTimeout(() => showFloatTextCenter('🌸 花粉多すぎ！'), 500);
+  }
+
+  const dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+  const [dr, dc] = dirs[Math.floor(Math.random()*8)];
+  let blownCount = 0;
+  for (let step = 1; step <= 5 && blownCount < 3; step++) {
+    const nr = 3 + dr*step, nc = 3 + dc*step;
+    if (nr<0||nr>=8||nc<0||nc>=8) break;
+    if (board[nr][nc] !== 0) {
+      const color = board[nr][nc];
+      board[nr][nc] = 0;
+      const [wx, wy, wz] = cellToWorld(nr, nc);
+      fallingStones.push({row:nr,col:nc,color,
+        ox:0,oz:0,oy:0,
+        vx:(Math.random()-0.5)*4,
+        vz:(Math.random()-0.5)*4,
+        vy:3+Math.random()*2, t:0});
+      blownCount++;
+    }
+  }
+
+  const cnt = countStones(board);
+  const weakerPlayer = cnt.black <= cnt.white ? BLACK : WHITE;
+  sneezeCharms[weakerPlayer] = (sneezeCharms[weakerPlayer] || 0) + 1;
+  updateSneezeCharmUI();
+  updateUI();
+}
+
+/** ボード粉砕を発動する */
+function triggerBoardDestruction() {
+  const overlay = document.getElementById('destruction-overlay');
+  overlay.style.display = 'block';
+  overlay.innerHTML = '<div class="destruction-text">💣 ボード粉砕！</div>';
+  for (let r=0; r<8; r++) for (let c=0; c<8; c++) {
+    if (board[r][c] !== 0) {
+      const color = board[r][c];
+      board[r][c] = 0;
+      const [wx,,wz] = cellToWorld(r,c);
+      fallingStones.push({
+        row:r,col:c,color,ox:0,oz:0,oy:0,
+        vx:(Math.random()-0.5)*15, vz:(Math.random()-0.5)*15,
+        vy:5+Math.random()*10, t:0
+      });
+    }
+  }
+  setTimeout(() => { endGame(); }, 1500);
+}
+
+/** チャージ着手を処理する */
+function handleBoardCharge(px, py, holdMs) {
+  const rect = canvas.getBoundingClientRect();
+  const ndcX =  (px - rect.left) / rect.width  * 2 - 1;
+  const ndcY = -((py - rect.top)  / rect.height * 2 - 1);
+
+  const invVP = mat4();
+  mat4Invert(invVP, vpMat);
+
+  const nearClip = [ndcX, ndcY, -1, 1];
+  const farClip  = [ndcX, ndcY,  1, 1];
+
+  function unproject(v) {
+    const x = invVP[0]*v[0]+invVP[4]*v[1]+invVP[8]*v[2]+invVP[12]*v[3];
+    const y = invVP[1]*v[0]+invVP[5]*v[1]+invVP[9]*v[2]+invVP[13]*v[3];
+    const z = invVP[2]*v[0]+invVP[6]*v[1]+invVP[10]*v[2]+invVP[14]*v[3];
+    const w = invVP[3]*v[0]+invVP[7]*v[1]+invVP[11]*v[2]+invVP[15]*v[3];
+    return [x/w, y/w, z/w];
+  }
+
+  const n   = unproject(nearClip);
+  const f   = unproject(farClip);
+  const dir = [f[0]-n[0], f[1]-n[1], f[2]-n[2]];
+  const t = (0.09 - n[1]) / dir[1];
+  if(t < 0 || t > 1000) return;
+
+  const ix = n[0] + dir[0]*t;
+  const iz = n[2] + dir[2]*t;
+  const col = Math.round(ix + 3.5);
+  const row = Math.round(iz + 3.5);
+  if(row < 0 || row >= 8 || col < 0 || col >= 8) return;
+  if(board[row][col] !== 0) return;
+
+  if (holdMs >= 3000) {
+    triggerBoardDestruction();
+    return;
+  }
+
+  const flips = getFlips(board, row, col, currentPlayer);
+  if (flips.length === 0) return;
+
+  // 通常配置
+  placeStone(row, col);
+
+  // チャージ半径エフェクト
+  const radius = holdMs >= 1500 ? 2 : 1;
+  const msgText = holdMs >= 1500 ? '💥💥 大爆発！' : '💥 軽爆発！';
+  showFloatTextCenter(msgText);
+
+  // 配置後に少し遅延させてチャージエフェクト適用
+  setTimeout(() => {
+    for (let r2 = 0; r2 < 8; r2++) for (let c2 = 0; c2 < 8; c2++) {
+      if (r2 === row && c2 === col) continue;
+      if (Math.abs(r2 - row) <= radius && Math.abs(c2 - col) <= radius) {
+        if (board[r2][c2] !== 0 && board[r2][c2] !== currentPlayer) {
+          board[r2][c2] = currentPlayer;
+          addFlipAnim(r2, c2, 0);
+        }
+      }
+    }
+    updateUI();
+  }, 100);
 }
 
 // ============================================================
@@ -1144,9 +1528,23 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('mousedown', e => {
   mouseDown = true; mouseBtn = e.button;
   lastMX = e.clientX; lastMY = e.clientY;
+  // カオス: チャージ開始
+  if (chaosMode && e.button === 0) {
+    pressStartTime = Date.now();
+    chargeX = e.clientX;
+    chargeY = e.clientY;
+    isCharging = true;
+  }
   e.preventDefault();
 });
-window.addEventListener('mouseup', () => { mouseDown = false; });
+
+window.addEventListener('mouseup', () => {
+  mouseDown = false;
+  if (chaosMode) {
+    isCharging = false;
+    hideChargeGauge();
+  }
+});
 
 window.addEventListener('mousemove', e => {
   if(!mouseDown) return;
@@ -1154,15 +1552,17 @@ window.addEventListener('mousemove', e => {
   lastMX = e.clientX; lastMY = e.clientY;
 
   if(mouseBtn === 0) {
-    // 左ドラッグ: 視点回転 (球座標の phi/theta を変化させる)
-    // vPhi/vTheta に保存して慣性にも使う
     const dphi = dx * 0.005, dtheta = dy * 0.005;
     camera.vPhi = dphi * 0.3; camera.vTheta = dtheta * 0.3;
     camera.phi   += dphi;
     camera.theta += dtheta;
-    camera.theta = Math.max(0.1, Math.min(Math.PI*0.48, camera.theta));
+    // クランプはカオスモードによって異なる
+    if (chaosMode) {
+      camera.theta = Math.max(0.05, Math.min(Math.PI*0.52, camera.theta));
+    } else {
+      camera.theta = Math.max(0.1, Math.min(Math.PI*0.48, camera.theta));
+    }
   } else if(mouseBtn === 2) {
-    // 右ドラッグ: 視点パン (target を右方向・上方向に移動)
     const right = [Math.cos(camera.phi), 0, -Math.sin(camera.phi)];
     const s = camera.radius * 0.003;
     camera.target[0] -= right[0] * dx * s;
@@ -1178,7 +1578,14 @@ canvas.addEventListener('wheel', e => {
 
 // クリック: 着手判定
 canvas.addEventListener('click', e => {
-  if(!gameOver && !cpuThinking) handleBoardClick(e.clientX, e.clientY);
+  if(!gameOver && !cpuThinking) {
+    const holdMs = Date.now() - pressStartTime;
+    if (chaosMode && holdMs >= 500) {
+      handleBoardCharge(e.clientX, e.clientY, holdMs);
+    } else {
+      handleBoardClick(e.clientX, e.clientY);
+    }
+  }
 });
 
 // ---- タッチ操作 ----
@@ -1187,8 +1594,13 @@ canvas.addEventListener('touchstart', e => {
   if(e.touches.length === 1){
     mouseDown = true; mouseBtn = 0;
     lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
+    if (chaosMode) {
+      pressStartTime = Date.now();
+      chargeX = e.touches[0].clientX;
+      chargeY = e.touches[0].clientY;
+      isCharging = true;
+    }
   } else if(e.touches.length === 2){
-    // ピンチ開始時の指間距離・中点を記録
     const t0=e.touches[0], t1=e.touches[1];
     touchStartDist = Math.hypot(t1.clientX-t0.clientX, t1.clientY-t0.clientY);
     touchMidX = (t0.clientX+t1.clientX)/2;
@@ -1198,12 +1610,18 @@ canvas.addEventListener('touchstart', e => {
 
 canvas.addEventListener('touchend', e => {
   e.preventDefault();
-  // 移動量が小さければタップとみなして着手
+  if (chaosMode) { isCharging = false; hideChargeGauge(); }
   if(e.changedTouches.length===1 && e.touches.length===0){
     const dx = e.changedTouches[0].clientX - lastMX;
     const dy = e.changedTouches[0].clientY - lastMY;
-    if(Math.hypot(dx,dy) < 10 && !gameOver && !cpuThinking)
-      handleBoardClick(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    if(Math.hypot(dx,dy) < 10 && !gameOver && !cpuThinking) {
+      const holdMs = Date.now() - pressStartTime;
+      if (chaosMode && holdMs >= 500) {
+        handleBoardCharge(e.changedTouches[0].clientX, e.changedTouches[0].clientY, holdMs);
+      } else {
+        handleBoardClick(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+      }
+    }
     mouseDown = false;
   }
 }, { passive: false });
@@ -1211,14 +1629,16 @@ canvas.addEventListener('touchend', e => {
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
   if(e.touches.length === 1){
-    // 1 本指ドラッグ: 視点回転
     const dx = e.touches[0].clientX - lastMX, dy = e.touches[0].clientY - lastMY;
     lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
     camera.phi   += dx * 0.005;
     camera.theta += dy * 0.005;
-    camera.theta = Math.max(0.1, Math.min(Math.PI*0.48, camera.theta));
+    if (chaosMode) {
+      camera.theta = Math.max(0.05, Math.min(Math.PI*0.52, camera.theta));
+    } else {
+      camera.theta = Math.max(0.1, Math.min(Math.PI*0.48, camera.theta));
+    }
   } else if(e.touches.length === 2){
-    // 2 本指: ピンチ(ズーム) + パン
     const t0=e.touches[0], t1=e.touches[1];
     const dist = Math.hypot(t1.clientX-t0.clientX, t1.clientY-t0.clientY);
     camera.radius = Math.max(4, Math.min(30, camera.radius * (touchStartDist/dist)));
@@ -1244,25 +1664,14 @@ document.addEventListener('keydown', e => {
 // ============================================================
 // 11. レイキャスト (クリック → ボード座標変換)
 // ============================================================
-/**
- * スクリーン座標 (px, py) から、ボードの y=0.09 平面との交点を計算し、
- * 対応するマス座標に着手する。
- *
- * 手順:
- *   1. スクリーン座標 → NDC (Normalized Device Coordinates) に変換
- *   2. VP 逆行列で NDC 上のニア/ファー点をワールド座標にアンプロジェクト
- *   3. 2 点を結ぶレイとボード平面 (y = 0.09) の交点を求める
- *   4. 交点のワールド座標 → ボード (row, col) に丸める
- */
 function handleBoardClick(px, py) {
   const rect = canvas.getBoundingClientRect();
   const ndcX =  (px - rect.left) / rect.width  * 2 - 1;
-  const ndcY = -((py - rect.top)  / rect.height * 2 - 1); // Y は反転
+  const ndcY = -((py - rect.top)  / rect.height * 2 - 1);
 
   const invVP = mat4();
   mat4Invert(invVP, vpMat);
 
-  // NDC 上のニア・ファー点 (w=1 の同次座標)
   const nearClip = [ndcX, ndcY, -1, 1];
   const farClip  = [ndcX, ndcY,  1, 1];
 
@@ -1278,14 +1687,12 @@ function handleBoardClick(px, py) {
   const f   = unproject(farClip);
   const dir = [f[0]-n[0], f[1]-n[1], f[2]-n[2]];
 
-  // レイとボード平面 y=0.09 の交点パラメータ t
   const t = (0.09 - n[1]) / dir[1];
-  if(t < 0 || t > 1000) return; // ボード平面に交差しない
+  if(t < 0 || t > 1000) return;
 
   const ix = n[0] + dir[0]*t;
   const iz = n[2] + dir[2]*t;
 
-  // ワールド座標 → ボードインデックス (0〜7)
   const col = Math.round(ix + 3.5);
   const row = Math.round(iz + 3.5);
   if(row < 0 || row >= 8 || col < 0 || col >= 8) return;
@@ -1297,49 +1704,77 @@ function handleBoardClick(px, py) {
 // 12. ゲームフロー
 // ============================================================
 
-/**
- * (row, col) に currentPlayer の石を置く。
- * 処理順:
- *   1. 置けるか検証 (空マスかつ flips が 1 枚以上)
- *   2. 盤面を即座に更新 (board = applyMove の結果)
- *   3. drop アニメーション登録
- *   4. flip アニメーション登録 (置いた位置からのチェビシェフ距離でディレイ)
- *   5. 全アニメーション完了後に次の処理をスケジュール
- *      (ゲーム終了 / パス通知 / CPU 着手)
- */
 function placeStone(row, col) {
   if(board[row][col] !== 0) return;
   const flips = getFlips(board, row, col, currentPlayer);
   if(flips.length === 0) return;
 
   const { board: nb } = applyMove(board, row, col, currentPlayer);
-  board = nb; // 盤面を即座に更新
+  board = nb;
 
   addDropAnim(row, col);
-  // 放射状フリップ: 置いた石からのチェビシェフ距離 (max(|Δrow|, |Δcol|)) が
-  // 大きい石ほどディレイを多くかける
   flips.forEach(([r,c]) => {
     const dist = Math.max(Math.abs(r-row), Math.abs(c-col));
-    addFlipAnim(r, c, (dist-1) * 80); // dist=1: 0ms, dist=2: 80ms, ...
+    addFlipAnim(r, c, (dist-1) * 80);
   });
 
-  // アニメーション完了までの総時間
-  // (最も遠い駒までのディレイ + フリップ 1 枚の所要時間 + 余裕)
   const maxDist = flips.reduce((m,[r,c]) => Math.max(m, Math.abs(r-row), Math.abs(c-col)), 0);
   const animDuration = Math.max(300, (maxDist-1)*80 + 400) + 80;
+
+  // ===== カオスモード: sleepTimer / flipCount 更新 =====
+  if (chaosMode) {
+    const flippedKeys = new Set(flips.map(([r,c]) => `${r},${c}`));
+    const placedKey = `${row},${col}`;
+
+    // 全石のスリープタイマーを更新
+    for (let r=0; r<8; r++) for (let c=0; c<8; c++) {
+      if (board[r][c] === 0) continue;
+      const key = `${r},${c}`;
+      if (flippedKeys.has(key)) {
+        // ひっくり返された石: タイマーリセット + フリップカウント加算
+        sleepTimer[key] = 0;
+        flipCount[key] = (flipCount[key] || 0) + 1;
+      } else if (key === placedKey) {
+        // 置かれた石: タイマーリセット
+        sleepTimer[key] = 0;
+      } else {
+        // それ以外: タイマー加算
+        sleepTimer[key] = (sleepTimer[key] || 0) + 1;
+      }
+    }
+
+    // 目覚め効果: 置いた位置の隣接する眠り石を起こす
+    for (const [dr, dc] of DIRS) {
+      const nr = row + dr, nc = col + dc;
+      if (nr < 0 || nr >= 8 || nc < 0 || nc >= 8) continue;
+      if (board[nr][nc] === 0) continue;
+      const adjKey = `${nr},${nc}`;
+      if ((sleepTimer[adjKey] || 0) >= 3) {
+        sleepTimer[adjKey] = 0;
+        const screen = worldToScreen(...cellToWorld(nr, nc));
+        if (screen) showFloatText('ビクッ！', screen[0], screen[1] - 20);
+      }
+    }
+
+    // 反乱チェック: 新しくひっくり返された石でフリップカウント >= 10
+    for (const [r, c] of flips) {
+      const key = `${r},${c}`;
+      if ((flipCount[key] || 0) >= 10 && Math.random() < 0.4) {
+        triggerRebellion(r, c);
+      }
+    }
+  }
 
   updateUI();
   const nextPlayer = currentPlayer === BLACK ? WHITE : BLACK;
   const nextMoves  = getMoves(board, nextPlayer);
   const curMoves   = getMoves(board, currentPlayer);
 
-  // 両者とも打てなければゲーム終了
   if(nextMoves.length === 0 && curMoves.length === 0){
     setTimeout(() => endGame(), animDuration);
     return;
   }
 
-  // 次のプレイヤーが打てなければパス
   if(nextMoves.length === 0){
     setTimeout(() => {
       alert(`${nextPlayer===BLACK ? '黒' : '白'}は着手できないのでパスします`);
@@ -1350,28 +1785,64 @@ function placeStone(row, col) {
   currentPlayer = nextPlayer;
   updateTurnDisplay();
 
-  // 1P モードで白番になったら CPU 着手をスケジュール
   if(gameMode === '1p' && currentPlayer === WHITE){
     scheduleCPU(animDuration);
   }
+
+  // ===== カオスモード: くしゃみチェック =====
+  if (chaosMode) {
+    setTimeout(() => {
+      if (!gameOver && Math.random() < 0.05) {
+        triggerSneeze();
+      }
+    }, animDuration + 50);
+  }
 }
 
-/**
- * アニメーション完了後に CPU に着手させる。
- * CPU の思考処理自体は setTimeout 内で同期実行される点に注意
- * (重い探索がメインスレッドをブロックするため、Hard 難易度では
- *  思考中インジケーターを表示して操作を受け付けないようにしている)。
- */
+/** 反乱を発動する */
+function triggerRebellion(r, c) {
+  const key = `${r},${c}`;
+  rebellingStones.add(key);
+  const screen = worldToScreen(...cellToWorld(r, c));
+  if (screen) showFloatText('😤 もう嫌だ！', screen[0], screen[1] - 30);
+  setTimeout(() => {
+    rebellingStones.delete(key);
+  }, 600);
+}
+
 function scheduleCPU(delay) {
   cpuThinking = true;
-  updateTurnDisplay(); // 「CPU 思考中...」を表示
+  updateTurnDisplay();
   setTimeout(() => {
     const move = cpuMove(board, WHITE);
     cpuThinking = false;
     if(move){
       placeStone(move[0], move[1]);
+
+      // ===== カオスモード: CPU 感情評価 =====
+      if (chaosMode) {
+        const evalScore = evaluate(board, WHITE);
+        cpuLastEvals.push(evalScore);
+        if (cpuLastEvals.length > 3) cpuLastEvals.shift();
+        if (cpuLastEvals.length === 3 &&
+            cpuLastEvals[0] > cpuLastEvals[1] && cpuLastEvals[1] > cpuLastEvals[2]) {
+          cpuAnger = Math.min(100, cpuAnger + 20);
+        } else if (cpuLastEvals.length === 3 &&
+                   cpuLastEvals[0] < cpuLastEvals[1] && cpuLastEvals[1] < cpuLastEvals[2]) {
+          cpuAnger = Math.max(0, cpuAnger - 10);
+        }
+        updateCpuAngerUI();
+        if (cpuAnger >= 100) { cpuAnger = 0; updateCpuAngerUI(); triggerCpuRage(); }
+        // Hard CPU 激怒モーダル
+        if (cpuDiff === 'hard' && !cpuHasRaged && evaluate(board, WHITE) < -120) {
+          cpuHasRaged = true;
+          setTimeout(() => {
+            document.getElementById('cpu-rage-modal').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+          }, 800);
+        }
+      }
     } else {
-      // CPU もパス → 黒番に戻す
       const myMoves = getMoves(board, BLACK);
       if(myMoves.length === 0) endGame();
       else { currentPlayer = BLACK; updateTurnDisplay(); }
@@ -1379,7 +1850,6 @@ function scheduleCPU(delay) {
   }, delay);
 }
 
-/** ゲーム終了処理: 結果表示 + 勝者石のジャンプアニメーション */
 function endGame() {
   gameOver = true;
   const cnt = countStones(board);
@@ -1398,7 +1868,14 @@ function endGame() {
   }
   result.textContent = `黒: ${cnt.black}  白: ${cnt.white}`;
 
-  // 勝者の石をジャンプさせる
+  // カオスモード: 落下石数表示
+  const chaosResult = document.getElementById('gameover-chaos-result');
+  if (chaosMode && chaosDroppedCount > 0) {
+    chaosResult.textContent = `💦 粗相した石: ${chaosDroppedCount}枚`;
+  } else {
+    chaosResult.textContent = '';
+  }
+
   const winner = cnt.black > cnt.white ? BLACK : cnt.white > cnt.black ? WHITE : 0;
   if(winner){
     const cells = [];
@@ -1408,30 +1885,46 @@ function endGame() {
   }
 }
 
-/** ゲームを完全にリセットして初期状態に戻す */
 function startNewGame() {
   board         = newBoard();
   currentPlayer = BLACK;
   gameOver      = false;
   cpuThinking   = false;
-  // アニメーションキューをクリア
   animations.length = 0;
   Object.keys(diskAnims).forEach(k => delete diskAnims[k]);
   Object.keys(hintBob).forEach(k  => delete hintBob[k]);
   document.getElementById('gameover-modal').style.display = 'none';
   document.getElementById('overlay').style.display = 'none';
+
+  // カオスモード状態リセット
+  stoneWobble = 0; gravitySliding = false;
+  gravSlideCounted.clear();
+  Object.keys(stoneSlideOffset).forEach(k => delete stoneSlideOffset[k]);
+  Object.keys(sleepTimer).forEach(k => delete sleepTimer[k]);
+  Object.keys(flipCount).forEach(k => delete flipCount[k]);
+  rebellingStones.clear(); fallingStones.length = 0;
+  cpuAnger = 0; cpuLastEvals = []; cpuHasRaged = false; cpuRageRefused = false;
+  sneezeCharms = {}; consecutiveSneezes = 0; sneezeBlocked = false;
+  chaosDroppedCount = 0; isCharging = false;
+  document.getElementById('cpu-anger-bar').style.display = 'none';
+  document.getElementById('sneeze-charm').style.display = 'none';
+  document.getElementById('cpu-rage-modal').style.display = 'none';
+  document.getElementById('gravity-warning').style.display = 'none';
+  document.getElementById('destruction-overlay').style.display = 'none';
+  document.getElementById('zzz-layer').innerHTML = '';
+  document.getElementById('chaos-msg').style.display = 'none';
+  hideChargeGauge();
+
   updateUI();
   updateTurnDisplay();
 }
 
-/** スコア表示を現在の盤面に合わせて更新する */
 function updateUI() {
   const cnt = countStones(board);
   document.getElementById('score-black').textContent = cnt.black;
   document.getElementById('score-white').textContent = cnt.white;
 }
 
-/** ターン表示 (テキスト・スタイル) を更新する */
 function updateTurnDisplay() {
   const el = document.getElementById('turn-display');
   el.className = '';
@@ -1462,7 +1955,6 @@ document.getElementById('btn-settings').addEventListener('click', () => {
   document.getElementById('overlay').style.display = 'block';
 });
 
-// 設定を確定してゲームをリセット
 document.getElementById('btn-close-settings').addEventListener('click', () => {
   gameMode = document.getElementById('sel-mode').value;
   cpuDiff  = document.getElementById('sel-diff').value;
@@ -1471,17 +1963,60 @@ document.getElementById('btn-close-settings').addEventListener('click', () => {
   startNewGame();
 });
 
-// オーバーレイクリックで設定パネルを閉じる (ゲーム終了時は閉じない)
 document.getElementById('overlay').addEventListener('click', () => {
   document.getElementById('settings-panel').style.display = 'none';
+  document.getElementById('cpu-rage-modal').style.display = 'none';
   if(!gameOver) document.getElementById('overlay').style.display = 'none';
+});
+
+// カオストグルボタン
+document.getElementById('btn-chaos-toggle').addEventListener('click', () => {
+  chaosMode = !chaosMode;
+  const btn = document.getElementById('btn-chaos-toggle');
+  const badge = document.getElementById('chaos-badge');
+  btn.textContent = chaosMode ? 'ON' : 'OFF';
+  btn.className = chaosMode ? 'toggle-btn on' : 'toggle-btn';
+  badge.style.display = chaosMode ? 'inline' : 'none';
+  // カオス状態リセット
+  stoneWobble = 0; gravitySliding = false;
+  gravSlideCounted.clear();
+  Object.keys(stoneSlideOffset).forEach(k => delete stoneSlideOffset[k]);
+  Object.keys(sleepTimer).forEach(k => delete sleepTimer[k]);
+  Object.keys(flipCount).forEach(k => delete flipCount[k]);
+  rebellingStones.clear(); fallingStones.length = 0;
+  cpuAnger = 0; cpuLastEvals = []; cpuHasRaged = false;
+  sneezeCharms = {}; consecutiveSneezes = 0; sneezeBlocked = false;
+  chaosDroppedCount = 0; isCharging = false;
+  document.getElementById('cpu-anger-bar').style.display = 'none';
+  document.getElementById('sneeze-charm').style.display = 'none';
+  document.getElementById('cpu-rage-modal').style.display = 'none';
+  document.getElementById('gravity-warning').style.display = 'none';
+  document.getElementById('destruction-overlay').style.display = 'none';
+  document.getElementById('zzz-layer').innerHTML = '';
+  document.getElementById('chaos-msg').style.display = 'none';
+  hideChargeGauge();
+});
+
+// CPU 激怒モーダルボタン
+document.getElementById('btn-refuse-reset').addEventListener('click', () => {
+  cpuRageRefused = true;
+  cpuHasRaged = true;
+  document.getElementById('cpu-rage-modal').style.display = 'none';
+  document.getElementById('overlay').style.display = 'none';
+  showChaosMsg('勝利確定！', 2000);
+});
+
+document.getElementById('btn-allow-reset').addEventListener('click', () => {
+  document.getElementById('cpu-rage-modal').style.display = 'none';
+  document.getElementById('overlay').style.display = 'none';
+  startNewGame();
 });
 
 // ============================================================
 // 14. 起動
 // ============================================================
-startNewGame();           // 初期盤面セット
-requestAnimationFrame(render); // レンダリングループ開始
+startNewGame();
+requestAnimationFrame(render);
 </script>
 </body>
 </html>
